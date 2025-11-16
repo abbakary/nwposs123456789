@@ -3772,8 +3772,8 @@ def add_order_component(request: HttpRequest, pk: int):
     if request.method != 'POST':
         return redirect('tracker:order_detail', pk=order.id)
 
-    if order.status == 'completed' or order.status == 'cancelled':
-        messages.error(request, 'Cannot add components to completed or cancelled orders.')
+    if order.status == 'cancelled':
+        messages.error(request, 'Cannot add components to cancelled orders.')
         return redirect('tracker:order_detail', pk=order.id)
 
     component_type = request.POST.get('component_type', '').strip().lower()
