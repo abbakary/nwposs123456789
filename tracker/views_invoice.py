@@ -349,10 +349,41 @@ def api_upload_extract_invoice(request):
         inv.seller_tax_id = (header.get('seller_tax_id') or '').strip() or None
         inv.seller_vat_reg = (header.get('seller_vat_reg') or '').strip() or None
 
-        # Set monetary fields with proper defaults (use correct field names from extraction)
-        inv.subtotal = header.get('subtotal') or Decimal('0')
-        inv.tax_amount = header.get('tax') or Decimal('0')
-        inv.total_amount = header.get('total') or (inv.subtotal + inv.tax_amount)
+        # Helper to safely convert extracted values to Decimal
+        def ensure_decimal(value, default=Decimal('0')):
+            """Convert various types to Decimal safely"""
+            if value is None:
+                return default
+            if isinstance(value, Decimal):
+                return value
+            try:
+                # Handle string values with commas or spaces
+                if isinstance(value, str):
+                    cleaned = value.strip().replace(',', '').replace(' ', '')
+                    if cleaned and cleaned not in ('.', '-'):
+                        return Decimal(cleaned)
+                else:
+                    return Decimal(str(value))
+            except (ValueError, TypeError, Exception):
+                logger.warning(f"Failed to convert value to Decimal: {value} (type: {type(value).__name__})")
+            return default
+
+        # Set monetary fields with proper defaults - convert extracted values to Decimal
+        # IMPORTANT: These values come directly from extraction and must be validated
+        extracted_subtotal = header.get('subtotal')
+        extracted_tax = header.get('tax')
+        extracted_total = header.get('total')
+
+        inv.subtotal = ensure_decimal(extracted_subtotal, Decimal('0'))
+        inv.tax_amount = ensure_decimal(extracted_tax, Decimal('0'))
+
+        # For total: prefer extracted value, fallback to calculated (subtotal + tax)
+        if extracted_total is not None:
+            inv.total_amount = ensure_decimal(extracted_total, None)
+            if inv.total_amount is None:
+                inv.total_amount = inv.subtotal + inv.tax_amount
+        else:
+            inv.total_amount = inv.subtotal + inv.tax_amount
 
         # Set tax rate if extracted (percentage)
         if header.get('tax_rate'):
@@ -366,13 +397,13 @@ def api_upload_extract_invoice(request):
             except (ValueError, TypeError):
                 inv.tax_rate = Decimal('0')
 
-        # Ensure totals are valid
-        if inv.subtotal is None:
-            inv.subtotal = Decimal('0')
-        if inv.tax_amount is None:
-            inv.tax_amount = Decimal('0')
-        if inv.total_amount is None:
-            inv.total_amount = inv.subtotal + inv.tax_amount
+        # Final validation - ensure all monetary fields are Decimal and not None
+        inv.subtotal = inv.subtotal or Decimal('0')
+        inv.tax_amount = inv.tax_amount or Decimal('0')
+        inv.total_amount = inv.total_amount or (inv.subtotal + inv.tax_amount)
+
+        # Log the extracted amounts for debugging
+        logger.info(f"Invoice extraction: subtotal={inv.subtotal}, tax={inv.tax_amount}, total={inv.total_amount}")
 
         inv.created_by = request.user
         if not getattr(inv, 'invoice_number', None):
