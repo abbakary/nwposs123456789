@@ -3794,8 +3794,46 @@ def add_order_component(request: HttpRequest, pk: int):
 
     try:
         invoice = None
+
+        # Handle existing invoice link
         if invoice_id:
             invoice = Invoice.objects.get(pk=invoice_id, order=order)
+
+        # Handle invoice upload with values
+        invoice_file = request.FILES.get('invoice_file')
+        invoice_subtotal = request.POST.get('invoice_subtotal', '0').strip()
+        invoice_tax_amount = request.POST.get('invoice_tax_amount', '0').strip()
+        invoice_total_amount = request.POST.get('invoice_total_amount', '0').strip()
+
+        if invoice_file or (invoice_subtotal and float(invoice_subtotal or 0) > 0):
+            from decimal import Decimal
+            try:
+                subtotal = Decimal(str(invoice_subtotal or '0').replace(',', ''))
+                tax_amount = Decimal(str(invoice_tax_amount or '0').replace(',', ''))
+                total_amount = Decimal(str(invoice_total_amount or '0').replace(',', ''))
+
+                # Create new invoice for this order
+                invoice = Invoice.objects.create(
+                    branch=order.branch,
+                    order=order,
+                    customer=order.customer,
+                    vehicle=order.vehicle,
+                    invoice_date=timezone.localdate(),
+                    subtotal=subtotal,
+                    tax_amount=tax_amount,
+                    total_amount=total_amount or (subtotal + tax_amount),
+                    created_by=request.user
+                )
+                invoice.generate_invoice_number()
+
+                # Save uploaded file if provided
+                if invoice_file:
+                    invoice.document = invoice_file
+
+                invoice.save()
+            except (ValueError, Decimal.InvalidOperation):
+                messages.error(request, 'Invalid invoice amounts provided.')
+                return redirect('tracker:order_detail', pk=order.id)
 
         component = OrderComponent.objects.create(
             order=order,
