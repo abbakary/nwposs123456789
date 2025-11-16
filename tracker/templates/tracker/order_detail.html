@@ -714,7 +714,7 @@
       <div class="card shadow-sm mb-4 order-types-card">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0"><i class="fa fa-layer-group me-2"></i>Order Components</h6>
-          {% if order.status != 'completed' and order.status != 'cancelled' %}
+          {% if order.status != 'cancelled' %}
           <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addOrderTypeModal">
             <i class="fa fa-plus me-1"></i>Add Component
           </button>
@@ -976,7 +976,7 @@
                     <td class="text-end action-buttons-compact">
                       <a href="{{ url }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fa fa-eye me-1"></i>View</a>
                       <a href="{{ url }}" download class="btn btn-sm btn-outline-secondary"><i class="fa fa-download me-1"></i>Download</a>
-                      {% if order.status != 'completed' and order.status != 'cancelled' and order.type != 'inquiry' %}
+                      {% if order.status != 'cancelled' and order.type != 'inquiry' %}
                       <button type="button" class="btn btn-sm btn-success sign-existing-doc" data-file-url="{{ url }}" data-file-name="{{ name }}" data-attachment-id="{{ att.id }}" data-bs-toggle="modal" data-bs-target="#signExistingModal"><i class="fa fa-pen me-1"></i>Sign</button>
                       {% endif %}
                     </td>
@@ -1051,7 +1051,7 @@
             <small class="text-muted">Status</small>
             <div id="orderStatusBadge">
               {% if order.status == 'created' %}
-                <span class="badge bg-secondary"><i class="fa fa-play me-1"></i>New</span>
+                <span class="badge bg-secondary"><i class="fa fa-play me-1"></i>Started</span>
               {% elif order.status == 'in_progress' %}
                 {% if order.is_overdue %}
                   <span class="badge bg-danger"><i class="fa fa-exclamation-triangle me-1"></i>Overdue</span>
@@ -1641,15 +1641,69 @@
             <small class="text-muted">Explain why you are adding this component</small>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label fw-bold">Link Invoice <span class="text-muted">(optional)</span></label>
-            <select name="invoice_id" class="form-select">
-              <option value="">-- Select Invoice (optional) --</option>
-              {% for invoice in order.invoices.all %}
-              <option value="{{ invoice.id }}">{{ invoice.invoice_number }} - {{ invoice.total_amount|floatformat:2 }}</option>
-              {% endfor %}
-            </select>
-            <small class="text-muted">Attach an invoice to this component</small>
+          <ul class="nav nav-tabs nav-fill mb-3" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="existingInvoiceTab" data-bs-toggle="tab" data-bs-target="#existingInvoicePane" type="button" role="tab">
+                <i class="fa fa-file-invoice me-2"></i>Existing Invoice
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="uploadInvoiceTab" data-bs-toggle="tab" data-bs-target="#uploadInvoicePane" type="button" role="tab">
+                <i class="fa fa-upload me-2"></i>Upload Invoice
+              </button>
+            </li>
+          </ul>
+
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="existingInvoicePane" role="tabpanel">
+              <div class="mb-3">
+                <label class="form-label fw-bold">Link Existing Invoice <span class="text-muted">(optional)</span></label>
+                <select name="invoice_id" class="form-select" id="existingInvoiceSelect">
+                  <option value="">-- Select Invoice (optional) --</option>
+                  {% for invoice in order.invoices.all %}
+                  <option value="{{ invoice.id }}">{{ invoice.invoice_number }} - {{ invoice.total_amount|floatformat:2 }}</option>
+                  {% endfor %}
+                </select>
+                <small class="text-muted">Attach an existing invoice to this component</small>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="uploadInvoicePane" role="tabpanel">
+              <div class="mb-3">
+                <label class="form-label fw-bold">Upload Invoice Document <span class="text-muted">(optional)</span></label>
+                <input type="file" name="invoice_file" class="form-control" id="componentInvoiceFile" accept=".pdf,.jpg,.jpeg,.png" />
+                <small class="text-muted">Upload a PDF or image file of the invoice</small>
+              </div>
+
+              <div class="row g-2 mb-3">
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Net Value</label>
+                  <div class="input-group">
+                    <input type="number" name="invoice_subtotal" class="form-control" id="componentNetValue" placeholder="0.00" step="0.01" min="0" />
+                    <span class="input-group-text">{{ request.user.userprofile.currency_symbol|default:'$' }}</span>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">VAT %</label>
+                  <input type="number" name="invoice_vat_rate" class="form-control" id="componentVATRate" placeholder="0.00" step="0.01" min="0" max="100" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">VAT Amount</label>
+                  <div class="input-group">
+                    <input type="number" name="invoice_tax_amount" class="form-control" id="componentVATAmount" placeholder="0.00" step="0.01" min="0" readonly />
+                    <span class="input-group-text">{{ request.user.userprofile.currency_symbol|default:'$' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-bold">Gross Value (Total)</label>
+                <div class="input-group">
+                  <input type="number" name="invoice_total_amount" class="form-control" id="componentGrossValue" placeholder="0.00" step="0.01" min="0" readonly />
+                  <span class="input-group-text">{{ request.user.userprofile.currency_symbol|default:'$' }}</span>
+                </div>
+                <small class="text-muted">Net Value + VAT Amount</small>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -1662,6 +1716,64 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const netValueInput = document.getElementById('componentNetValue');
+  const vatRateInput = document.getElementById('componentVATRate');
+  const vatAmountInput = document.getElementById('componentVATAmount');
+  const grossValueInput = document.getElementById('componentGrossValue');
+  const existingInvoiceSelect = document.getElementById('existingInvoiceSelect');
+
+  function calculateValues() {
+    const netValue = parseFloat(netValueInput.value) || 0;
+    const vatRate = parseFloat(vatRateInput.value) || 0;
+    const vatAmount = (netValue * vatRate) / 100;
+    const grossValue = netValue + vatAmount;
+
+    vatAmountInput.value = vatAmount.toFixed(2);
+    grossValueInput.value = grossValue.toFixed(2);
+  }
+
+  if (netValueInput) {
+    netValueInput.addEventListener('input', calculateValues);
+  }
+  if (vatRateInput) {
+    vatRateInput.addEventListener('input', calculateValues);
+  }
+
+  const addComponentForm = document.getElementById('addComponentForm');
+  if (addComponentForm) {
+    addComponentForm.addEventListener('submit', function(e) {
+      const activeTab = document.querySelector('.nav-link.active');
+      if (activeTab && activeTab.id === 'uploadInvoiceTab') {
+        const netValue = parseFloat(netValueInput.value) || 0;
+        const grossValue = parseFloat(grossValueInput.value) || 0;
+        if (netValue > 0 || grossValue > 0) {
+          e.preventDefault();
+          const formData = new FormData(this);
+          fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]').value
+            }
+          }).then(response => {
+            if (response.ok) {
+              window.location.reload();
+            } else {
+              alert('Error adding component. Please try again.');
+            }
+          }).catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+          });
+        }
+      }
+    });
+  }
+});
+</script>
 
 <!-- Link Invoice Modal -->
 <div class="modal fade" id="linkInvoiceModal" tabindex="-1" aria-hidden="true">

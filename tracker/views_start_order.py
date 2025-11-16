@@ -56,64 +56,64 @@ def api_start_order(request):
             return JsonResponse({'success': False, 'error': 'Invalid order type'}, status=400)
 
         user_branch = get_user_branch(request.user)
-
-        # Check for existing started order for this plate (status='in_progress')
-        # If one exists and hasn't been updated yet, return it instead of creating a duplicate
-        existing_vehicle = None
-        if plate_number:
-            existing_vehicle = Vehicle.objects.filter(plate_number__iexact=plate_number, customer__branch=user_branch).select_related('customer').first()
-        if existing_vehicle:
-            # Check if there's already a started (in_progress) order for this vehicle
-            existing_order = Order.objects.filter(
-                vehicle=existing_vehicle,
-                status='in_progress'
-            ).order_by('-created_at').first()
-
-            if existing_order and not use_existing and not existing_customer_id:
-                # Return existing order instead of creating a duplicate
-                return JsonResponse({
-                    'success': True,
-                    'order_id': existing_order.id,
-                    'order_number': existing_order.order_number,
-                    'plate_number': plate_number,
-                    'started_at': existing_order.started_at.isoformat(),
-                    'existing_order': True,
-                    'message': 'Existing order found for this plate'
-                }, status=200)
-
-            if not use_existing and not existing_customer_id:
-                # Inform frontend that a customer exists for this plate
-                return JsonResponse({
-                    'success': True,
-                    'existing_customer': {
-                        'id': existing_vehicle.customer.id,
-                        'full_name': existing_vehicle.customer.full_name,
-                        'phone': existing_vehicle.customer.phone,
-                    },
-                    'existing_vehicle': {
-                        'id': existing_vehicle.id,
-                        'plate': existing_vehicle.plate_number,
-                        'make': existing_vehicle.make,
-                        'model': existing_vehicle.model,
-                    }
-                }, status=200)
-
         from .services import CustomerService, VehicleService
 
         with transaction.atomic():
             # Decide which customer to use
             if existing_customer_id:
-                customer = get_object_or_404(Customer, id=existing_customer_id, branch=user_branch if user_branch else None) if user_branch else get_object_or_404(Customer, id=existing_customer_id)
-                # Ensure branch is set to customer's branch if missing
-                if not user_branch:
-                    user_branch = customer.branch
-                vehicle = None
-                if plate_number:
-                    vehicle = VehicleService.create_or_get_vehicle(
-                        customer=customer,
-                        plate_number=plate_number
-                    )
+                # Use the specified customer
+                if user_branch:
+                    customer = get_object_or_404(Customer, id=existing_customer_id, branch=user_branch)
+                else:
+                    customer = get_object_or_404(Customer, id=existing_customer_id)
+                    # Use customer's branch if user doesn't have one
+                    if not user_branch and customer.branch:
+                        user_branch = customer.branch
             else:
+                customer = None
+
+            # Check for existing orders only if not using a pre-selected customer
+            # (if customer is pre-selected, allow creating new order with same plate)
+            existing_vehicle = None
+            if plate_number and not existing_customer_id:
+                existing_vehicle = Vehicle.objects.filter(plate_number__iexact=plate_number, customer__branch=user_branch).select_related('customer').first()
+                if existing_vehicle:
+                    # Check if there's already a started (in_progress) order for this vehicle
+                    existing_order = Order.objects.filter(
+                        vehicle=existing_vehicle,
+                        status='in_progress'
+                    ).order_by('-created_at').first()
+
+                    if existing_order:
+                        # Return existing order instead of creating a duplicate
+                        return JsonResponse({
+                            'success': True,
+                            'order_id': existing_order.id,
+                            'order_number': existing_order.order_number,
+                            'plate_number': plate_number,
+                            'started_at': existing_order.started_at.isoformat(),
+                            'existing_order': True,
+                            'message': 'Existing order found for this plate'
+                        }, status=200)
+
+                    # Inform frontend that a customer exists for this plate
+                    return JsonResponse({
+                        'success': True,
+                        'existing_customer': {
+                            'id': existing_vehicle.customer.id,
+                            'full_name': existing_vehicle.customer.full_name,
+                            'phone': existing_vehicle.customer.phone,
+                        },
+                        'existing_vehicle': {
+                            'id': existing_vehicle.id,
+                            'plate': existing_vehicle.plate_number,
+                            'make': existing_vehicle.make,
+                            'model': existing_vehicle.model,
+                        }
+                    }, status=200)
+
+            # Create new customer if not using pre-selected one
+            if not customer:
                 try:
                     name_src = plate_number or f"Customer {timezone.now().strftime('%Y%m%d%H%M')}"
                     phone_src = plate_number and f"PLATE_{plate_number}" or None
@@ -133,12 +133,13 @@ def api_start_order(request):
                         defaults={'customer_type': 'personal'}
                     )
 
-                vehicle = None
-                if plate_number:
-                    vehicle = VehicleService.create_or_get_vehicle(
-                        customer=customer,
-                        plate_number=plate_number
-                    )
+            # Create or get vehicle for the customer
+            vehicle = None
+            if plate_number and customer:
+                vehicle = VehicleService.create_or_get_vehicle(
+                    customer=customer,
+                    plate_number=plate_number
+                )
 
             # Calculate estimated duration from selected services if provided
             try:

@@ -184,9 +184,9 @@
             <small class="text-muted">
               <i class="fa fa-clock me-1"></i>
               {% if order.status == 'created' %}
-                Created: {{ order.created_at|localtime|date_medium }}
+                Started: {{ order.created_at|localtime|date_medium }}
               {% elif order.status == 'in_progress' %}
-                Started: {{ order.started_at|localtime|date_medium }}
+                In Progress: {{ order.started_at|localtime|date_medium }}
               {% elif order.status == 'completed' %}
                 Completed: {{ order.completed_at|localtime|date_medium }}
               {% else %}
