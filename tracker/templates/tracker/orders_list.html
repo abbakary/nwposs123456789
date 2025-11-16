@@ -208,7 +208,7 @@
                 <select name="status" class="form-select">
                   {% with s=status %}
                   <option value="all" {% if s == 'all' %}selected{% endif %}>All</option>
-                  <option value="created" {% if s == 'created' %}selected{% endif %}>New</option>
+                  <option value="created" {% if s == 'created' %}selected{% endif %}>Started</option>
                   <option value="in_progress" {% if s == 'in_progress' %}selected{% endif %}>In Progress</option>
                   <option value="overdue" {% if s == 'overdue' %}selected{% endif %}>Overdue</option>
                   <option value="completed" {% if s == 'completed' %}selected{% endif %}>Completed</option>
@@ -373,7 +373,7 @@
               </td>
               <td>
                 {% if o.status == 'created' %}
-                  <span class="badge bg-secondary rounded-pill"><i class="fa fa-play me-1"></i>New</span>
+                  <span class="badge bg-secondary rounded-pill"><i class="fa fa-play me-1"></i>Started</span>
                 {% elif o.status == 'in_progress' %}
                   <span class="badge bg-warning text-dark rounded-pill"><i class="fa fa-clock me-1"></i>In Progress</span>
                 {% elif o.status == 'overdue' %}
