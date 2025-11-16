@@ -20,6 +20,7 @@ class AutoProgressOrdersMiddleware(MiddlewareMixin):
     """Automatically progress orders from 'created' to 'in_progress' after 10 minutes
     without requiring users to visit the order page.
 
+    Also marks orders as overdue based on working hours (9 hours: 8 AM - 5 PM).
     Also computes header notification metrics for stale in-progress orders (>24h).
     """
     def process_request(self, request):
@@ -34,6 +35,19 @@ class AutoProgressOrdersMiddleware(MiddlewareMixin):
                 # Use F() to set started_at from created_at, preserving the actual start time
                 from django.db.models import F
                 updated.update(status='in_progress', started_at=F('created_at'))
+        except Exception:
+            # Do not block the request pipeline on errors
+            pass
+
+        # Mark orders as overdue based on working hours (9 working hours = 8 AM to 5 PM)
+        try:
+            from .utils.time_utils import is_order_overdue
+            in_progress_orders = Order.objects.filter(status='in_progress', started_at__isnull=False).select_related('customer')
+
+            for order in in_progress_orders:
+                if is_order_overdue(order.started_at, now):
+                    order.status = 'overdue'
+                    order.save(update_fields=['status'])
         except Exception:
             # Do not block the request pipeline on errors
             pass

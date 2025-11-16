@@ -138,6 +138,12 @@ class Order(models.Model):
         ("completed", "Completed"),
         ("cancelled", "Cancelled"),
     ]
+    # Status lifecycle: created -> in_progress -> (overdue or completed or cancelled)
+    # created = "Started": Order just created, not yet auto-progressed
+    # in_progress: Order auto-progressed after 10 mins, actively being worked on
+    # overdue: Order exceeded 9 working hours (8 AM - 5 PM) while in_progress
+    # completed: Order finished successfully
+    # cancelled: Order cancelled by user
     PRIORITY_CHOICES = [("low", "Low"), ("medium", "Medium"), ("high", "High"), ("urgent", "Urgent")]
 
     order_number = models.CharField(max_length=32, unique=True, editable=False)

@@ -46,17 +46,25 @@ logger = logging.getLogger(__name__)
 
 def _mark_overdue_orders(hours=24):
     try:
+        from .utils.time_utils import is_order_overdue, calculate_working_hours_between
+
         now = timezone.now()
         # Ensure inquiries are treated as completed (retroactively normalize existing data)
         Order.objects.filter(type='inquiry').exclude(status='completed').update(status='completed', completed_at=now, completion_date=now)
 
         # Auto progress: created -> in_progress after 10 minutes (exclude inquiries)
         created_cutoff = now - timedelta(minutes=10)
-        Order.objects.filter(status="created", created_at__lte=created_cutoff).exclude(type='inquiry').update(status="in_progress", started_at=now)
+        Order.objects.filter(status="created", created_at__lte=created_cutoff).exclude(type='inquiry').update(status="in_progress", started_at=F('created_at'))
 
-        # Persist overdue: any non-final older than cutoff, excluding inquiry
-        cutoff = now - timedelta(hours=hours)
-        Order.objects.filter(status__in=["created","in_progress"], created_at__lt=cutoff).exclude(type='inquiry').update(status="overdue")
+        # Mark orders as overdue based on working hours elapsed (9 working hours = 8 AM to 5 PM)
+        # Only check orders that are currently in_progress
+        in_progress_orders = Order.objects.filter(status='in_progress', started_at__isnull=False).exclude(type='inquiry')
+
+        for order in in_progress_orders:
+            if is_order_overdue(order.started_at, now):
+                order.status = 'overdue'
+                order.save(update_fields=['status'])
+
     except Exception:
         pass
 
