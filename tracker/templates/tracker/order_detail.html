@@ -3299,7 +3299,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (!fileUrl) {
         existingDocPreviewHost.innerHTML = '<div class="w-100 h-100 bg-white d-flex align-items-center justify-content-center"><div class="text-center text-muted"><i class="fa fa-pen fa-3x mb-3"></i><div>Draw signature here</div></div></div>';
-        initializeExistingDocSignaturePad();
         return;
       }
 
@@ -3318,7 +3317,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!existingDocPreviewHost.contains(img)) {
               existingDocPreviewHost.appendChild(img);
             }
-            initializeExistingDocSignaturePad();
           };
         } else if (fileType.includes('.pdf')) {
           const iframe = document.createElement('iframe');
@@ -3330,7 +3328,6 @@ document.addEventListener('DOMContentLoaded', function() {
           iframe.style.minHeight = '360px';
 
           existingDocPreviewHost.appendChild(iframe);
-          setTimeout(initializeExistingDocSignaturePad, 300);
         } else {
           const container = document.createElement('div');
           container.className = 'w-100 h-100 d-flex align-items-center justify-content-center flex-column';
@@ -3343,12 +3340,10 @@ document.addEventListener('DOMContentLoaded', function() {
             </a>
           `;
           existingDocPreviewHost.appendChild(container);
-          initializeExistingDocSignaturePad();
         }
       } catch (error) {
         console.error('Error setting document preview:', error);
         existingDocPreviewHost.innerHTML = '<div class="text-center text-muted p-4">Error loading file preview</div>';
-        initializeExistingDocSignaturePad();
       }
     }
 
