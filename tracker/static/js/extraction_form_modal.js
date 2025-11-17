@@ -134,7 +134,7 @@ class ExtractionFormModal {
     }
 
     prevBtn.style.display = actualStep === 1 || actualStep === 2 ? 'none' : 'block';
-    nextBtn.style.display = actualStep >= (this.isCustomerPreSelected ? 2 : this.totalSteps) ? 'none' : 'block';
+    nextBtn.style.display = actualStep >= this.totalSteps ? 'none' : 'block';
     submitBtn.style.display = actualStep === this.totalSteps ? 'block' : 'none';
 
     this.currentStep = actualStep;
