@@ -698,60 +698,117 @@
 
       <!-- Multiple Order Types Section -->
       {% if order.type != 'inquiry' %}
-      <div class="card shadow-sm mb-4 order-types-card">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0"><i class="fa fa-layer-group me-2"></i>Order Components</h6>
+      <div class="card shadow-sm mb-4 order-components-card">
+        <div class="card-header bg-gradient-info text-white d-flex justify-content-between align-items-center">
+          <h6 class="mb-0"><i class="fa fa-layer-group me-2"></i>Additional Items & Services</h6>
           {% if order.status != 'cancelled' %}
-          <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addOrderTypeModal">
-            <i class="fa fa-plus me-1"></i>Add Component
+          <button type="button" class="btn btn-sm btn-light text-info fw-medium" data-bs-toggle="modal" data-bs-target="#addOrderTypeModal">
+            <i class="fa fa-plus me-1"></i>Add Item/Service
           </button>
           {% endif %}
         </div>
         <div class="card-body">
-          {% if order.components.exists %}
-          <div class="components-list">
-            {% for component in order.components.all %}
-            <div class="component-item mb-3 p-3 border rounded" style="background-color: #f8f9fa;">
-              <div class="d-flex justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                  <div class="d-flex align-items-center mb-2">
-                    {% if component.type == 'service' %}
-                      <i class="fa fa-wrench text-primary me-2"></i>
-                      <span class="badge bg-primary">SERVICE</span>
-                    {% elif component.type == 'sales' %}
-                      <i class="fa fa-shopping-cart text-success me-2"></i>
-                      <span class="badge bg-success">SALES</span>
+          {% if order.components.exists or order.invoice_links.exists %}
+          <div class="components-and-invoices-list">
+            <!-- Order Components -->
+            {% if order.components.exists %}
+            <div class="components-section mb-4">
+              <h6 class="text-muted mb-3"><i class="fa fa-cubes me-2"></i>Added Components</h6>
+              {% for component in order.components.all %}
+              <div class="component-item mb-3 p-3 border rounded" style="background-color: #f8f9fa;">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div class="flex-grow-1">
+                    <div class="d-flex align-items-center mb-2">
+                      {% if component.type == 'service' %}
+                        <i class="fa fa-wrench text-primary me-2"></i>
+                        <span class="badge bg-primary">SERVICE</span>
+                      {% elif component.type == 'sales' %}
+                        <i class="fa fa-shopping-cart text-success me-2"></i>
+                        <span class="badge bg-success">SALES</span>
+                      {% endif %}
+                      <small class="text-muted ms-2">Added {{ component.added_at|localtime|date:"M j, Y g:i a" }}</small>
+                    </div>
+                    {% if component.reason %}
+                    <div class="mt-2">
+                      <small class="text-muted d-block"><strong>Reason:</strong></small>
+                      <p class="mb-0 text-dark">{{ component.reason }}</p>
+                    </div>
                     {% endif %}
-                    <small class="text-muted ms-2">Added {{ component.added_at|localtime|date:"M j, Y g:i a" }}</small>
+                    {% if component.invoice %}
+                    <div class="mt-2">
+                      <small class="text-muted d-block"><strong>Invoice:</strong></small>
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="fa fa-file-pdf text-danger"></i>
+                        <a href="{% url 'tracker:invoice_detail' pk=component.invoice.id %}" class="text-decoration-none fw-medium">
+                          {{ component.invoice.invoice_number }}
+                        </a>
+                        <span class="badge bg-secondary">{{ component.invoice.total_amount|floatformat:2 }}</span>
+                      </div>
+                    </div>
+                    {% endif %}
                   </div>
-                  {% if component.reason %}
-                  <div class="mt-2">
-                    <small class="text-muted d-block">Reason:</small>
-                    <p class="mb-0 text-dark">{{ component.reason }}</p>
+                  <div class="component-actions">
+                    {% if component.signed_at %}
+                    <span class="badge bg-success"><i class="fa fa-check me-1"></i>Signed</span>
+                    {% endif %}
                   </div>
-                  {% endif %}
-                  {% if component.invoice %}
-                  <div class="mt-2">
-                    <small class="text-muted d-block">Invoice:</small>
-                    <a href="{% url 'tracker:invoice_detail' pk=component.invoice.id %}" class="text-decoration-none">
-                      <strong>{{ component.invoice.invoice_number }}</strong>
-                    </a>
-                  </div>
-                  {% endif %}
-                </div>
-                <div class="component-actions">
-                  {% if component.signed_at %}
-                  <span class="badge bg-success"><i class="fa fa-check me-1"></i>Signed</span>
-                  {% endif %}
                 </div>
               </div>
+              {% endfor %}
             </div>
-            {% endfor %}
+            {% endif %}
+
+            <!-- Linked Invoices -->
+            {% if order.invoice_links.exists %}
+            <div class="invoices-section">
+              <h6 class="text-muted mb-3"><i class="fa fa-file-invoice me-2"></i>Associated Invoices</h6>
+              {% for link in order.invoice_links.all %}
+              <div class="invoice-link-item mb-3 p-3 border rounded" style="background-color: #f8f9fa;">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div class="flex-grow-1">
+                    <div class="d-flex align-items-center mb-2 flex-wrap gap-2">
+                      <i class="fa fa-file-pdf text-danger me-2"></i>
+                      <a href="{% url 'tracker:invoice_detail' pk=link.invoice.id %}" class="text-decoration-none fw-bold">
+                        {{ link.invoice.invoice_number }}
+                      </a>
+                      {% if link.is_primary %}
+                      <span class="badge bg-primary">Primary</span>
+                      {% endif %}
+                      <small class="text-muted">{{ link.linked_at|localtime|date:"M j, Y g:i a" }}</small>
+                    </div>
+                    <div class="mt-2">
+                      <small class="text-muted d-block">Amount: <strong class="text-success">{{ link.invoice.total_amount|floatformat:2 }}</strong></small>
+                    </div>
+                    {% if link.reason %}
+                    <div class="mt-2">
+                      <small class="text-muted d-block"><strong>Reason:</strong></small>
+                      <p class="mb-0 text-dark">{{ link.reason }}</p>
+                    </div>
+                    {% endif %}
+                  </div>
+                  <div class="invoice-actions">
+                    <div class="btn-group btn-group-sm">
+                      <a href="{% url 'tracker:invoice_detail' pk=link.invoice.id %}" class="btn btn-outline-primary" title="View Invoice">
+                        <i class="fa fa-eye"></i>
+                      </a>
+                      {% if order.status != 'completed' and order.status != 'cancelled' %}
+                      <button type="button" class="btn btn-outline-danger remove-invoice-link" data-link-id="{{ link.id }}" data-bs-toggle="modal" data-bs-target="#removeInvoiceLinkModal" title="Remove">
+                        <i class="fa fa-trash"></i>
+                      </button>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
           </div>
           {% else %}
-          <div class="text-muted text-center py-3">
-            <i class="fa fa-inbox fa-2x opacity-50 mb-2"></i>
-            <p class="mb-0">No additional components. This order has only the main {{ order.get_type_display|lower }} type.</p>
+          <div class="text-muted text-center py-4">
+            <i class="fa fa-cube fa-2x opacity-50 mb-2"></i>
+            <p class="mb-2">No additional items or services added yet.</p>
+            <small>Use the "Add Item/Service" button to include more items with this order.</small>
           </div>
           {% endif %}
         </div>
