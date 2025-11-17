@@ -1079,7 +1079,9 @@
               {% if order.estimated_duration < 60 %}
                 {{ order.estimated_duration }}m
               {% else %}
-                {% widthratio order.estimated_duration 60 1 %}h {% widthratio order.estimated_duration 60 1 as hours %}{{ order.estimated_duration|add:"-"|add:hours|mul:60 }}m
+                {% with hours=order.estimated_duration|divisibleby:60 minutes=order.estimated_duration %}
+                  {% if hours %}{{ order.estimated_duration|div:60 }}h{% else %}{{ order.estimated_duration|div:60 }}h {{ order.estimated_duration|mod:60 }}m{% endif %}
+                {% endwith %}
               {% endif %}
             </div>
           </div>
