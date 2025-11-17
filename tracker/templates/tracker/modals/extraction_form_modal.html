@@ -125,10 +125,105 @@
 
           </div>
 
-          <!-- Step 3: Extracted Data -->
+          <!-- Step 3: Add Another Order Type (Optional) -->
           <div class="extraction-step d-none mt-4" id="extractionStep3" data-step="3">
             <h6 class="fw-bold mb-3">
               <span class="step-badge-sm">3</span>
+              <i class="fa fa-plus-circle me-2 text-primary"></i>Add Another Item/Service (Optional)
+            </h6>
+
+            <div class="alert alert-info mb-3">
+              <small><i class="fa fa-info-circle me-1"></i>
+                Current order type: <strong>{{ order.type|upper }}</strong>
+                <br>You can add a complementary item/service type to this order.
+              </small>
+            </div>
+
+            <div class="add-component-section">
+              <div class="form-check form-check-lg mb-3">
+                <input class="form-check-input" type="checkbox" id="addComponentCheckbox" name="add_component">
+                <label class="form-check-label fw-medium" for="addComponentCheckbox">
+                  Add another {{ 'Sales Item' if order.type == 'service' else 'Service' }} to this order?
+                </label>
+              </div>
+
+              <!-- Component Selection (shown when checkbox is checked) -->
+              <div id="componentSelectionWrapper" style="display: none;" class="mt-3">
+                <div class="card border-0 bg-light">
+                  <div class="card-body">
+                    <h6 class="fw-semibold mb-3">
+                      <i class="fa fa-cube me-2"></i>{{ 'Sales Item' if order.type == 'service' else 'Service' }}
+                    </h6>
+
+                    <!-- Component Type Selection -->
+                    <div class="mb-3">
+                      <label class="form-label fw-medium">What would you like to add?</label>
+                      <div class="component-type-grid">
+                        {% if order.type == 'service' %}
+                          <!-- Show Sales options if main order is Service -->
+                          <label class="component-type-card">
+                            <input type="radio" name="component_type" value="sales" class="d-none" required>
+                            <div class="component-card-content">
+                              <i class="fa fa-shopping-cart fa-lg text-success mb-2"></i>
+                              <div class="fw-semibold">Sales Item</div>
+                              <small class="text-muted d-block">Tire, part, or product</small>
+                            </div>
+                          </label>
+                        {% else %}
+                          <!-- Show Service options if main order is Sales -->
+                          <label class="component-type-card">
+                            <input type="radio" name="component_type" value="service" class="d-none" required>
+                            <div class="component-card-content">
+                              <i class="fa fa-wrench fa-lg text-primary mb-2"></i>
+                              <div class="fw-semibold">Service</div>
+                              <small class="text-muted d-block">Installation, balancing, etc.</small>
+                            </div>
+                          </label>
+                        {% endif %}
+                      </div>
+                    </div>
+
+                    <!-- Reason Input -->
+                    <div class="mb-3">
+                      <label class="form-label fw-medium">Reason for adding <span class="text-danger">*</span></label>
+                      <textarea name="component_reason" class="form-control" rows="3" placeholder="e.g., Customer requested installation service with the tire purchase..." style="resize: vertical;"></textarea>
+                      <small class="text-muted d-block mt-1">Briefly explain why this item/service is being added</small>
+                    </div>
+
+                    <!-- Additional Details (for Sales items) -->
+                    {% if order.type == 'service' %}
+                    <div id="salesItemDetailsWrapper" style="display: none;" class="mt-3 pt-3 border-top">
+                      <h6 class="fw-semibold mb-3">Sales Item Details</h6>
+                      <div class="row g-2">
+                        <div class="col-md-6">
+                          <label class="form-label fw-medium">Item Name</label>
+                          <input type="text" name="component_item_name" class="form-control" placeholder="e.g., Tire, Oil filter">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label fw-medium">Brand</label>
+                          <input type="text" name="component_brand" class="form-control" placeholder="e.g., Michelin, Mobil">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label fw-medium">Quantity</label>
+                          <input type="number" name="component_quantity" class="form-control" min="1" placeholder="1" value="1">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label fw-medium">Tire Type (if applicable)</label>
+                          <input type="text" name="component_tire_type" class="form-control" placeholder="e.g., Radial, Bias">
+                        </div>
+                      </div>
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4: Extracted Data (moved from Step 3) -->
+          <div class="extraction-step d-none mt-4" id="extractionStep4" data-step="4">
+            <h6 class="fw-bold mb-3">
+              <span class="step-badge-sm">4</span>
               <i class="fa fa-file-text me-2 text-primary"></i>Extracted Information
             </h6>
 
