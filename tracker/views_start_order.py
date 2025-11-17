@@ -774,6 +774,44 @@ def api_update_order_from_extraction(request):
 
             order.save()
 
+            # Handle adding another component if requested
+            add_component = request.POST.get('add_component', '').strip().lower() in ['on', 'true', '1', 'yes']
+            if add_component:
+                from .models import OrderComponent
+
+                component_type = request.POST.get('component_type', '').strip().lower()
+                component_reason = request.POST.get('component_reason', '').strip()
+
+                if component_type in ['service', 'sales'] and component_reason:
+                    # Check if component already exists
+                    if not OrderComponent.objects.filter(order=order, type=component_type).exists():
+                        # Create the component
+                        component = OrderComponent.objects.create(
+                            order=order,
+                            type=component_type,
+                            reason=component_reason,
+                            added_by=request.user
+                        )
+
+                        # Store additional details if it's a sales component
+                        if component_type == 'sales':
+                            component_item_name = request.POST.get('component_item_name', '').strip()
+                            component_brand = request.POST.get('component_brand', '').strip()
+                            component_quantity = request.POST.get('component_quantity', '1').strip()
+                            component_tire_type = request.POST.get('component_tire_type', '').strip()
+
+                            # Append to order description for reference
+                            if component_item_name:
+                                component_desc = f"\n\nAdded Item ({component_type.title()}):\n- Item: {component_item_name}"
+                                if component_brand:
+                                    component_desc += f"\n- Brand: {component_brand}"
+                                if component_quantity:
+                                    component_desc += f"\n- Qty: {component_quantity}"
+                                if component_tire_type:
+                                    component_desc += f"\n- Type: {component_tire_type}"
+                                order.description = (order.description or '') + component_desc
+                                order.save()
+
         return JsonResponse({
             'success': True,
             'message': 'Order updated successfully',
