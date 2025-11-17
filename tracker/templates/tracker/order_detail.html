@@ -229,7 +229,7 @@
                 <div class="fw-medium">{{ order.created_at|localtime|date_medium }}</div>
               </div>
             </div>
-            {% if order.started_at %}
+            {% if order.started_at and order.completed_at %}
             <div class="timeline-item">
               <div class="timeline-marker bg-warning"></div>
               <div class="timeline-content">
