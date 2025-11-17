@@ -252,8 +252,8 @@ class CustomerService:
                     personal_subtype=personal_subtype or None,
                     arrival_time=timezone.now(),
                     current_status='arrived',
-                    last_visit=timezone.now(),
-                    total_visits=1,
+                    last_visit=None,
+                    total_visits=0,
                 )
                 return customer, True
         except IntegrityError as e:
