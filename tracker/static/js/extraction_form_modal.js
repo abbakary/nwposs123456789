@@ -8,7 +8,7 @@ class ExtractionFormModal {
     this.orderType = orderType;
     this.orderId = orderId;
     this.currentStep = 1;
-    this.totalSteps = 3;
+    this.totalSteps = 4;
     this.formData = {};
     this.modal = null;
     this.isCustomerPreSelected = false;
